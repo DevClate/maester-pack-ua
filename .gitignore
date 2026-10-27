@@ -1,0 +1,10 @@
+# Files the operating system creates. A binary file in the pack makes Maester's scan rate it High risk.
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# Maester output written while you try the pack.
+TestResults/
+test-results/
+maester-config.json

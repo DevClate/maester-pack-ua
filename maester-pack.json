@@ -1,0 +1,40 @@
+{
+  "$schema": "https://maester.dev/schemas/maester-pack-1.0.json",
+  "Id": "devclate.user-attributes",
+  "Guid": "f2048a83-e7a4-445c-ae6f-849019f51372",
+  "Name": "User Attributes",
+  "Description": "Checks that Microsoft Entra users have the attributes HR processes, dynamic groups and licensing depend on, and that those values are formatted consistently.",
+  "Version": "0.4.0",
+  "Publisher": "devclate",
+  "License": "MIT",
+  "Homepage": "https://github.com/DevClate/maester-pack-ua",
+  "Support": "https://github.com/DevClate/maester-pack-ua/issues",
+  "SecurityContact": "https://github.com/DevClate/maester-pack-ua/security/advisories/new",
+  "RequiresMaester": ">=3.0",
+  "Code": "CLT.UA",
+  "Suites": [
+    "tests"
+  ],
+  "Helpers": [
+    "helpers"
+  ],
+  "Uses": {
+    "Services": [
+      "Graph"
+    ],
+    "GraphScopes": [
+      "User.Read.All",
+      "GroupMember.Read.All",
+      "User-LifeCycleInfo.Read.All"
+    ],
+    "TenantWrites": [],
+    "Network": [],
+    "Modules": []
+  },
+  "Categories": [
+    "Identity",
+    "Data quality"
+  ],
+  "Guide": "maester-pack.guide.json",
+  "Banner": "assets/banner.png"
+}

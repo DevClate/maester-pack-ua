@@ -1,0 +1,63 @@
+# Checks the pack on every push and pull request: the manifest and the content checks that Install-MtPack runs
+# (Test-MtPack), then every test once from this folder (Invoke-MtTest -Path). Results such as Failed are
+# expected; a test the engine cannot run (bad metadata, a wrong return value, a bad parameter) fails the job.
+name: Check pack
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # bump-version.yml calls it on the commit that raises the version, which no push event checks.
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit to check.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install Maester
+        shell: pwsh
+        run: Install-PSResource -Name Maester -Prerelease -TrustRepository -Quiet
+
+      - name: Check the pack
+        shell: pwsh
+        run: |
+          Import-Module Maester
+          if (-not (Get-Command Test-MtPack -ErrorAction SilentlyContinue)) {
+            Write-Output '::warning::This Maester version has no packs yet; the pack was not checked.'
+            return
+          }
+          $manifest = Get-Content ./maester-pack.json -Raw | ConvertFrom-Json
+          # The maester and maester365 publishers are reserved for packs of the maester365 organisation.
+          $official = $manifest.Publisher -in 'maester', 'maester365'
+          $check = Test-MtPack . -Official:$official
+          $check | Format-List Id, Version, IsValid, Risk, Errors, Warnings, Findings
+          if (-not $check.IsValid) { throw 'The pack is not valid.' }
+          if ($check.Risk -eq 'High') { throw 'The content checks rate the pack High risk.' }
+
+      - name: Run the tests
+        shell: pwsh
+        run: |
+          Import-Module Maester
+          if (-not (Get-Command Test-MtPack -ErrorAction SilentlyContinue)) { return }
+          $manifest = Get-Content ./maester-pack.json -Raw | ConvertFrom-Json
+          if ($manifest.Publisher -in 'maester', 'maester365') {
+            Write-Output '::notice::Invoke-MtTest -Path does not run packs of the reserved maester365 publisher; skipped.'
+            return
+          }
+          $results = @(Invoke-MtTest -Path .)
+          $results | Format-Table Id, Result, ReasonCode -AutoSize | Out-String -Width 200
+          $broken = @($results | Where-Object ReasonCode -In 'InvalidMetadata', 'InvalidReturn', 'InvalidConfiguration', 'InvalidInstanceId', 'InstanceSourceFailed')
+          if ($broken) { throw "The engine could not run $($broken.Count) test(s): $($broken.Id -join ', ')" }
