@@ -24,7 +24,7 @@ No. You use two separate folders, and only one of them is yours:
 
 | Folder | What it is | Points at | You change it? |
 | --- | --- | --- | --- |
-| `C:\Tools\maester-packs` | Only if you use the fallback in step 3: a read-only copy of Maester, used only to load the module | `maester365/maester` | No, only `git pull` |
+| `C:\Tools\maester-main` | Only if you use the fallback in step 3: a read-only copy of Maester, used only to load the module | `maester365/maester` | No, only `git pull` |
 | `C:\Code\maester-pack-ua` | This pack | `DevClate/maester-pack-ua` | Yes |
 
 Cloning never creates a pull request. A pull request is only opened when someone pushes a branch and then explicitly creates one (`gh pr create`, the GitHub website, or a "Create pull request" button in VS Code or GitHub Desktop). You also have no write access to `maester365/maester`, so a push there fails. Even so, the fallback in step 3 turns off pushing from the Maester copy, so nothing can be sent from it by accident.
@@ -56,10 +56,10 @@ This is what the pack's CI does (`.github/workflows/check-pack.yml`). When a sta
 
 ### Fallback: a read-only copy of Maester's main branch
 
-Use this only if `Get-Command` above cannot find `Test-MtPack`. Clone `main`, then turn off pushing:
+Use this if `Get-Command` above cannot find `Test-MtPack`, or if the pack's tests fail with `Get-CltUser is not recognized` (the Gallery preview, such as 3.0.0-preview9, can be older than the pack format). Clone `main` into a **new, empty** folder, then turn off pushing. Don't reuse a folder that holds an older clone, such as the `claude/project-thread-…` branch an earlier version of this guide used: `git clone` refuses a folder that exists, and you would keep loading the old code.
 
 ```powershell
-$MaesterSrc = 'C:\Tools\maester-packs'
+$MaesterSrc = 'C:\Tools\maester-main'
 git clone --branch main --single-branch https://github.com/maester365/maester.git $MaesterSrc
 git -C $MaesterSrc remote set-url --push origin DISABLED
 git -C $MaesterSrc remote -v      # the (push) line must show DISABLED
@@ -68,13 +68,13 @@ git -C $MaesterSrc remote -v      # the (push) line must show DISABLED
 Load it in each new session (start a fresh `pwsh` window first if the Gallery Maester is already loaded), and pick up the maintainers' changes later with `git -C $MaesterSrc pull`:
 
 ```powershell
-$MaesterSrc = 'C:\Tools\maester-packs'
+$MaesterSrc = 'C:\Tools\maester-main'
 Remove-Module Maester -ErrorAction SilentlyContinue
 Import-Module "$MaesterSrc\powershell\Maester.psd1" -Force
-(Get-Module Maester).Path              # must be under C:\Tools\maester-packs
+(Get-Module Maester).Path              # must be under C:\Tools\maester-main
 ```
 
-**Without Git:** download `https://github.com/maester365/maester/archive/refs/heads/main.zip`, extract it, then unblock the files so PowerShell will load them: `Get-ChildItem C:\Tools\maester-packs -Recurse | Unblock-File`.
+**Without Git:** download `https://github.com/maester365/maester/archive/refs/heads/main.zip`, extract it, then unblock the files so PowerShell will load them: `Get-ChildItem C:\Tools\maester-main -Recurse | Unblock-File`.
 
 ## 4. Put the pack in your own repository
 
@@ -280,4 +280,6 @@ foreach ($u in (Get-Content .\pack-test-users.json -Raw | ConvertFrom-Json)) {
 | MP.CLT.UA.1006 always Investigate | Missing `User-LifeCycleInfo.Read.All`, or no hire dates set | Step 6 |
 | `-Parameter can be used only when exactly one test is selected` | `-Parameter` with a folder | Point `-Path` at one test file |
 | Results don't change after editing a user | Maester caches Graph results in the session | Start a new session, or wait and run again |
+| Every test errors with `The term 'Get-CltUser' is not recognized` | The Maester build loaded runs pack tests without the pack's helpers | Load Maester from a clone of `main` (step 3) and check `(Get-Module Maester).Path` |
+| `Test-MtPack`: `Code must be two to five letters or digits`, or `unknown key 'Guid'` | An old Maester build or an old clone is loaded | Clone `main` into a new folder (step 3); `git -C <folder> branch --show-current` must say `main` |
 | A result says "Showing the first 100 of …" | Results list at most `MaxRows` users or rows | Set `MaxRows` to `0` for that test (step 7) |
