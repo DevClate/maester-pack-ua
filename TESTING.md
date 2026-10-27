@@ -153,6 +153,8 @@ Invoke-MtTest -Path .\tests\Test.MP.CLT.UA.1013.ps1 -Parameter @{ AllowedCountri
 Invoke-MtTest -Path .\tests\Test.MP.CLT.UA.1001.ps1 -Parameter @{ ExcludedUsers = 'breakglass@contoso.com' }
 ```
 
+**Pack-wide settings while you develop.** `Invoke-MtTest -Path .` reads a `maester-config.json` in the pack folder (or up to five parent folders). The pack's `.gitignore` keeps that file out of the repository, so you can put test exclusions in it, for example `{ "GlobalSettings": { "CLT.UA.ExcludedUsers": ["svc-scanner@contoso.com"], "CLT.UA.OnlyLicensedUsers": true } }`. Each result then ends with a *Left out N users* line that shows which levels applied (README, **Leaving users out**).
+
 What to expect on a first run against a real tenant:
 
 | Result | Meaning |
@@ -196,8 +198,13 @@ Set per-tenant values in the run folder's `maester-config.json`:
 ```json
 {
   "Packs": [ { "Id": "devclate.user-attributes", "Source": "C:\\Code\\maester-pack-ua", "Version": "0.4.0" } ],
+  "GlobalSettings": {
+    "EmergencyAccessAccounts": [ { "UserPrincipalName": "breakglass@contoso.com", "Type": "User" } ],
+    "CLT.UA.ExcludedUsers": ["svc-scanner@contoso.com"],
+    "CLT.UA.OnlyLicensedUsers": true
+  },
   "TestSettings": [
-    { "Id": "MP.CLT.UA.1001", "Parameters": { "ExcludedUsers": ["breakglass@contoso.com"] } },
+    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["contractors@contoso.com"] } },
     { "Id": "MP.CLT.UA.1013", "Parameters": { "AllowedCountries": ["United States", "Canada"] } },
     { "Id": "MP.CLT.UA.1016", "Parameters": { "MaxRows": 0 } },
     { "Id": "MP.CLT.UA.1015", "Enabled": false, "Reason": "No company mobiles" }

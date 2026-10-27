@@ -24,11 +24,11 @@ function Test-CltEmployeeId {
     [CmdletBinding()]
     [OutputType([bool])]
     param(
-        # Users (user principal name or object ID) that are exempt, such as break-glass and service accounts.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt, such as a group of contractors without HR records.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -40,6 +40,7 @@ function Test-CltEmployeeId {
         [int] $MaxRows = 100
     )
 
-    $users = Get-CltUser -Property employeeId -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
-    return (Invoke-CltPresenceCheck -Users $users -Property employeeId -Label 'an employee ID' -Population (Get-CltPopulation -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows)
+    $set = Get-CltUser -Property employeeId -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
+    return (Invoke-CltPresenceCheck -Users $users -Property employeeId -Label 'an employee ID' -Population (Get-CltPopulation -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows -Note $set.Note)
 }

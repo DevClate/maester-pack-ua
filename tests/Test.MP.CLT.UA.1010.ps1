@@ -33,11 +33,11 @@ function Test-CltEmployeeIdUnique {
         # Treat IDs that differ only in leading zeros (00123 and 123) as the same ID.
         [bool] $IgnoreLeadingZeros = $false,
 
-        # Users (user principal name or object ID) that are exempt from this check.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -47,7 +47,8 @@ function Test-CltEmployeeIdUnique {
     )
 
     $population = Get-CltPopulation -IncludeDisabled $IncludeDisabled
-    $users = @(Get-CltUser -Property employeeId -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups |
+    $set = Get-CltUser -Property employeeId -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = @($set.Users |
         Where-Object { -not (Test-CltIsBlank $_.employeeId) })
     if ($users.Count -eq 0) {
         Add-MtTestResultDetail -SkippedBecause Custom -SkippedCustomReason "None of the $population has an employee ID, so there is nothing to compare."
@@ -77,11 +78,11 @@ function Test-CltEmployeeIdUnique {
     $rows = @($rows | Sort-Object 'Employee ID')
 
     if ($rows.Count -eq 0) {
-        Add-MtTestResultDetail -Result "Well done. The $($users.Count) $population with an employee ID all have different IDs."
+        Add-CltResult -Note $set.Note -Result "Well done. The $($users.Count) $population with an employee ID all have different IDs."
         return $true
     }
 
     $table = Format-CltTable -Rows $rows -Columns 'Employee ID', 'Users' -MaxRows $MaxRows
-    Add-MtTestResultDetail -Result "$($rows.Count) employee ID(s) are shared by more than one user. Each ID should identify one person.`n`n$table"
+    Add-CltResult -Note $set.Note -Result "$($rows.Count) employee ID(s) are shared by more than one user. Each ID should identify one person.`n`n$table"
     return $false
 }

@@ -27,11 +27,11 @@ function Test-CltGuestSponsor {
     [CmdletBinding()]
     [OutputType([bool])]
     param(
-        # Guests (user principal name or object ID) that are exempt from this check.
+        # More guests (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -43,6 +43,7 @@ function Test-CltGuestSponsor {
         [int] $MaxRows = 100
     )
 
-    $users = Get-CltUser -UserType Guest -Expand 'sponsors($select=id,displayName)' -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
-    return (Invoke-CltPresenceCheck -Users $users -Property sponsors -Label 'a sponsor' -Population (Get-CltPopulation -UserType Guest -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows)
+    $set = Get-CltUser -UserType Guest -Expand 'sponsors($select=id,displayName)' -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
+    return (Invoke-CltPresenceCheck -Users $users -Property sponsors -Label 'a sponsor' -Population (Get-CltPopulation -UserType Guest -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows -Note $set.Note)
 }

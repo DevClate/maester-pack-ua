@@ -41,11 +41,11 @@ function Test-CltPhoneFormat {
         # Allow spaces inside the number, such as +1 425 555 0100.
         [bool] $AllowSpaces = $false,
 
-        # Users (user principal name or object ID) that are exempt from this check.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -65,7 +65,8 @@ function Test-CltPhoneFormat {
     $extension = [regex]::new('(\s*;\s*ext=\d+|\s*(x|ext\.?)\s*\d+)$', 'IgnoreCase')
 
     $population = Get-CltPopulation -IncludeDisabled $IncludeDisabled
-    $users = Get-CltUser -Property $Attributes -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $set = Get-CltUser -Property $Attributes -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
 
     $checkedNumbers = 0
     $rows = [System.Collections.Generic.List[object]]::new()
@@ -92,12 +93,12 @@ function Test-CltPhoneFormat {
         Add-MtTestResultDetail -SkippedBecause Custom -SkippedCustomReason "None of the $population has a phone number in $($Attributes -join ', ')."
     }
     if ($rows.Count -eq 0) {
-        Add-MtTestResultDetail -Result "Well done. All $checkedNumbers phone numbers set on $population match the required format."
+        Add-CltResult -Note $set.Note -Result "Well done. All $checkedNumbers phone numbers set on $population match the required format."
         return $true
     }
 
     $table = Format-CltTable -Rows $rows.ToArray() -Columns 'User', 'Attribute', 'Value' -MaxRows $MaxRows
-    Add-MtTestResultDetail -Result ("$($rows.Count) of $checkedNumbers phone numbers do not match the required format (``$PhonePattern``). " +
+    Add-CltResult -Note $set.Note -Result ("$($rows.Count) of $checkedNumbers phone numbers do not match the required format (``$PhonePattern``). " +
         "Write them as + country code and number with no punctuation, for example ``+14255550100``.`n`n$table")
     return $false
 }

@@ -22,11 +22,11 @@ function Test-CltFaxNumber {
     [CmdletBinding()]
     [OutputType([bool])]
     param(
-        # Users (user principal name or object ID) that are exempt, such as break-glass accounts.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -38,6 +38,7 @@ function Test-CltFaxNumber {
         [int] $MaxRows = 100
     )
 
-    $users = Get-CltUser -Property faxNumber -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
-    return (Invoke-CltPresenceCheck -Users $users -Property faxNumber -Label 'a fax number' -Population (Get-CltPopulation -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows)
+    $set = Get-CltUser -Property faxNumber -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
+    return (Invoke-CltPresenceCheck -Users $users -Property faxNumber -Label 'a fax number' -Population (Get-CltPopulation -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows -Note $set.Note)
 }

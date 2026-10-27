@@ -2,13 +2,23 @@
   "$schema": "https://maester.dev/schemas/maester-pack-guide-1.0.json",
   "Summary": "Checks that Microsoft Entra users have the attributes HR processes, dynamic groups and licensing depend on (usage location, manager, employee ID, hire date, address, sponsors for guests), and that phone numbers, countries and names are formatted consistently. Read-only.",
   "Prerequisites": [
-    { "Text": "PowerShell 7.4 or later." },
-    { "Text": "An account or app that can read users and group members in Microsoft Graph (User.Read.All and GroupMember.Read.All; Directory.Read.All covers both)." }
+    {
+      "Text": "PowerShell 7.4 or later."
+    },
+    {
+      "Text": "An account or app that can read users and group members in Microsoft Graph (User.Read.All and GroupMember.Read.All; Directory.Read.All covers both)."
+    }
   ],
   "Connect": {
     "Steps": [
-      { "Text": "Connect Maester to the tenant.", "Command": "Connect-Maester" },
-      { "Text": "To include employee hire dates (MP.CLT.UA.1006), connect with the extra scope instead. Without it, that test reports Investigate.", "Command": "Connect-MgGraph -Scopes ((Get-MtGraphScope) + 'User-LifeCycleInfo.Read.All')" }
+      {
+        "Text": "Connect Maester to the tenant.",
+        "Command": "Connect-Maester"
+      },
+      {
+        "Text": "To include employee hire dates (MP.CLT.UA.1006), connect with the extra scope instead. Without it, that test reports Investigate.",
+        "Command": "Connect-MgGraph -Scopes ((Get-MtGraphScope) + 'User-LifeCycleInfo.Read.All')"
+      }
     ],
     "Notes": [
       "Connect-Maester does not ask for User-LifeCycleInfo.Read.All. Every other test works with the scopes it asks for."
@@ -16,30 +26,102 @@
   },
   "Run": {
     "Commands": [
-      { "Text": "Only this pack", "Command": "Invoke-Maester -Pack CLT.UA -SkipBuiltIn" },
-      { "Text": "Maester's own tests and this pack", "Command": "Invoke-Maester -Pack CLT.UA" },
-      { "Text": "Leave out the fields many organisations don't use (business phone, mobile, fax, office location)", "Command": "Invoke-Maester -Pack CLT.UA -SkipBuiltIn -ExcludeTag Optional" },
-      { "Text": "List every failing user for one test instead of the first 100", "Command": "Invoke-MtTest -Id MP.CLT.UA.1016 -Parameter @{ MaxRows = 0 }" }
+      {
+        "Text": "Only this pack",
+        "Command": "Invoke-Maester -Pack CLT.UA -SkipBuiltIn"
+      },
+      {
+        "Text": "Maester's own tests and this pack",
+        "Command": "Invoke-Maester -Pack CLT.UA"
+      },
+      {
+        "Text": "Leave out the fields many organisations don't use (business phone, mobile, fax, office location)",
+        "Command": "Invoke-Maester -Pack CLT.UA -SkipBuiltIn -ExcludeTag Optional"
+      },
+      {
+        "Text": "List every failing user for one test instead of the first 100",
+        "Command": "Invoke-MtTest -Id MP.CLT.UA.1016 -Parameter @{ MaxRows = 0 }"
+      }
     ],
     "Notes": [
-      "Set the options below per test in maester-config.json under TestSettings, for example { \"Id\": \"MP.CLT.UA.1001\", \"Parameters\": { \"ExcludedGroups\": [\"<group object id>\"] } }."
+      "Pack-wide settings go under GlobalSettings in maester-config.json, for example \"CLT.UA.ExcludedUsers\": [\"svc-scanner@contoso.com\"]. Per-test settings go under TestSettings, for example { \"Id\": \"MP.CLT.UA.1005\", \"Parameters\": { \"ExcludedGroups\": [\"<group id>\"] } }."
     ],
     "Options": [
-      { "Name": "ExcludedUsers (every test)", "Default": "none", "Text": "User principal names or object IDs to leave out, such as break-glass and service accounts." },
-      { "Name": "ExcludedGroups (every test)", "Default": "none", "Text": "Object IDs of groups whose members, including nested members, are left out." },
-      { "Name": "IncludeDisabled (every test)", "Default": "false (true for MP.CLT.UA.1010)", "Text": "Also check disabled accounts." },
-      { "Name": "MaxRows (every test)", "Default": "100", "Text": "Most users or rows listed in a result. 0 lists them all." },
-      { "Name": "MP.CLT.UA.1002 ExcludedJobTitles", "Default": "CEO, Chief Executive Officer", "Text": "Job titles at the top of the organisation, which have no manager." },
-      { "Name": "MP.CLT.UA.1008 Fields", "Default": "streetAddress, city, state, postalCode, country", "Text": "Address fields that must be set. officeLocation can be added." },
-      { "Name": "MP.CLT.UA.1010 IgnoreLeadingZeros", "Default": "false", "Text": "Treat employee IDs that differ only in leading zeros as the same ID." },
-      { "Name": "MP.CLT.UA.1011 AllowSpaces", "Default": "false", "Text": "Allow spaces inside phone numbers, such as +1 425 555 0100." },
-      { "Name": "MP.CLT.UA.1011 PhonePattern", "Default": "^\\+[1-9]\\d{6,14}$", "Text": "Regular expression a phone number must match (E.164 by default)." },
-      { "Name": "MP.CLT.UA.1013 AllowedCountries", "Default": "none (lists the values found)", "Text": "The exact country spellings your organisation uses, such as United States." }
+      {
+        "Name": "GlobalSettings: CLT.UA.ExcludedUsers",
+        "Default": "none",
+        "Text": "Users (UPN or object ID) to leave out of every test in the pack, such as service accounts."
+      },
+      {
+        "Name": "GlobalSettings: CLT.UA.ExcludedGroups",
+        "Default": "none",
+        "Text": "Groups (object ID or mail) whose members, including nested members, are left out of every test."
+      },
+      {
+        "Name": "GlobalSettings: CLT.UA.ExcludeEmergencyAccessAccounts",
+        "Default": "true",
+        "Text": "Leave out Maester's EmergencyAccessAccounts (break-glass users and groups) in every test."
+      },
+      {
+        "Name": "GlobalSettings: CLT.UA.OnlyLicensedUsers",
+        "Default": "false",
+        "Text": "Check only member users with a licence. Guests are not affected."
+      },
+      {
+        "Name": "ExcludedUsers, ExcludedGroups (every test)",
+        "Default": "none",
+        "Text": "More users or groups to leave out of one test. They add to the pack-wide and emergency access exclusions."
+      },
+      {
+        "Name": "IncludeDisabled (every test)",
+        "Default": "false (true for MP.CLT.UA.1010)",
+        "Text": "Also check disabled accounts."
+      },
+      {
+        "Name": "MaxRows (every test)",
+        "Default": "100",
+        "Text": "Most users or rows listed in a result. 0 lists them all."
+      },
+      {
+        "Name": "MP.CLT.UA.1002 ExcludedJobTitles",
+        "Default": "CEO, Chief Executive Officer",
+        "Text": "Job titles at the top of the organisation, which have no manager."
+      },
+      {
+        "Name": "MP.CLT.UA.1008 Fields",
+        "Default": "streetAddress, city, state, postalCode, country",
+        "Text": "Address fields that must be set. officeLocation can be added."
+      },
+      {
+        "Name": "MP.CLT.UA.1010 IgnoreLeadingZeros",
+        "Default": "false",
+        "Text": "Treat employee IDs that differ only in leading zeros as the same ID."
+      },
+      {
+        "Name": "MP.CLT.UA.1011 AllowSpaces",
+        "Default": "false",
+        "Text": "Allow spaces inside phone numbers, such as +1 425 555 0100."
+      },
+      {
+        "Name": "MP.CLT.UA.1011 PhonePattern",
+        "Default": "^\\+[1-9]\\d{6,14}$",
+        "Text": "Regular expression a phone number must match (E.164 by default)."
+      },
+      {
+        "Name": "MP.CLT.UA.1013 AllowedCountries",
+        "Default": "none (lists the values found)",
+        "Text": "The exact country spellings your organisation uses, such as United States."
+      }
     ]
   },
   "AppOnly": {
     "Supported": true,
-    "Methods": { "Certificate": true, "ClientSecret": true, "ManagedIdentity": true, "WorkloadIdentity": true },
+    "Methods": {
+      "Certificate": true,
+      "ClientSecret": true,
+      "ManagedIdentity": true,
+      "WorkloadIdentity": true
+    },
     "Text": "Give the app the application permissions User.Read.All and GroupMember.Read.All, and User-LifeCycleInfo.Read.All for hire dates. The pack only reads."
   },
   "Support": {

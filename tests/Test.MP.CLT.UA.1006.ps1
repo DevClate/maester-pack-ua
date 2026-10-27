@@ -26,11 +26,11 @@ function Test-CltEmployeeHireDate {
     [CmdletBinding()]
     [OutputType([bool])]
     param(
-        # Users (user principal name or object ID) that are exempt, such as break-glass and service accounts.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt, such as a group of contractors without HR records.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -43,15 +43,16 @@ function Test-CltEmployeeHireDate {
     )
 
     $population = Get-CltPopulation -IncludeDisabled $IncludeDisabled
-    $users = Get-CltUser -Property employeeHireDate -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $set = Get-CltUser -Property employeeHireDate -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
 
     $withDate = @($users | Where-Object { -not (Test-CltIsBlank $_.employeeHireDate) })
     if ($users.Count -gt 1 -and $withDate.Count -eq 0) {
-        Add-MtTestResultDetail -Investigate -Result ("None of the $($users.Count) $population has an employee hire date. Either none are set, or this " +
+        Add-CltResult -Note $set.Note -Investigate -Result ("None of the $($users.Count) $population has an employee hire date. Either none are set, or this " +
             "connection cannot read them: Microsoft Graph returns employeeHireDate only with the **User-LifeCycleInfo.Read.All** permission. " +
             "Add that permission to the app or connection Maester uses, then run the test again.")
         return $true
     }
 
-    return (Invoke-CltPresenceCheck -Users $users -Property employeeHireDate -Label 'an employee hire date' -Population $population -MaxRows $MaxRows)
+    return (Invoke-CltPresenceCheck -Users $users -Property employeeHireDate -Label 'an employee hire date' -Population $population -MaxRows $MaxRows -Note $set.Note)
 }

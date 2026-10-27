@@ -32,11 +32,11 @@ function Test-CltManager {
         # Job titles at the top of the organisation that have no manager, matched exactly but ignoring case.
         [string[]] $ExcludedJobTitles = ('CEO', 'Chief Executive Officer'),
 
-        # Users (user principal name or object ID) that are exempt, such as break-glass accounts.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -48,9 +48,10 @@ function Test-CltManager {
         [int] $MaxRows = 100
     )
 
-    $users = Get-CltUser -Property jobTitle -Expand 'manager($select=id,displayName)' -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $set = Get-CltUser -Property jobTitle -Expand 'manager($select=id,displayName)' -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
     $topTitles = @($ExcludedJobTitles | Where-Object { $_ } | ForEach-Object { $_.Trim() })
     $users = @($users | Where-Object { -not ($_.jobTitle -and ($topTitles -contains "$($_.jobTitle)".Trim())) })
 
-    return (Invoke-CltPresenceCheck -Users $users -Property manager -Label 'a manager' -Population (Get-CltPopulation -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows)
+    return (Invoke-CltPresenceCheck -Users $users -Property manager -Label 'a manager' -Population (Get-CltPopulation -IncludeDisabled $IncludeDisabled) -MaxRows $MaxRows -Note $set.Note)
 }

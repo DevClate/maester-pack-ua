@@ -73,12 +73,48 @@ The connection Maester uses needs these Microsoft Graph permissions (all read-on
 
 By default every test checks **enabled member users** (MP.CLT.UA.1009 checks enabled guests, and MP.CLT.UA.1010 also checks disabled accounts). The Microsoft Entra Connect sync account is always left out.
 
+### Leaving users out
+
+Users are left out at three levels, and the levels add up: a test's own list never replaces the others.
+
+| Level | Set in `maester-config.json` | Applies to |
+| --- | --- | --- |
+| Emergency access accounts | `GlobalSettings.EmergencyAccessAccounts` (Maester's own setting, users or groups) | Every test in this pack, and Maester's Conditional Access tests |
+| Pack-wide | `GlobalSettings` → `"CLT.UA.ExcludedUsers"` and `"CLT.UA.ExcludedGroups"` | Every test in this pack |
+| This test | `TestSettings` → `ExcludedUsers` and `ExcludedGroups` | Only that test |
+
+Users are user principal names or object IDs; groups are object IDs or mail addresses, and their nested members are left out too. Each result ends with a line such as *Left out 14 users: 2 emergency access, 9 by the pack-wide exclusions, 3 by this test's ExcludedUsers and ExcludedGroups*, so you can see why someone isn't listed.
+
+```json
+{
+  "GlobalSettings": {
+    "EmergencyAccessAccounts": [ { "UserPrincipalName": "breakglass1@contoso.com", "Type": "User" } ],
+    "CLT.UA.ExcludedUsers": ["svc-scanner@contoso.com"],
+    "CLT.UA.ExcludedGroups": ["<object id of a Service Accounts group>"]
+  },
+  "TestSettings": [
+    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["contractors@contoso.com"] } }
+  ]
+}
+```
+
+### Pack settings
+
+| `GlobalSettings` key | Default | What it does |
+| --- | --- | --- |
+| `CLT.UA.ExcludedUsers` | none | Users to leave out of every test. |
+| `CLT.UA.ExcludedGroups` | none | Groups whose members are left out of every test. |
+| `CLT.UA.ExcludeEmergencyAccessAccounts` | `true` | Leave out Maester's `EmergencyAccessAccounts`. Set `false` to check them like any other user. |
+| `CLT.UA.OnlyLicensedUsers` | `false` | Check only member users with a licence, which leaves out most service, room and leftover accounts. Guests are not affected. |
+
+### Test parameters
+
 Every test takes these parameters:
 
 | Parameter | What it does |
 | --- | --- |
-| `ExcludedUsers` | User principal names or object IDs to leave out, such as break-glass and service accounts. |
-| `ExcludedGroups` | Object IDs of groups whose members (including nested members) are left out. |
+| `ExcludedUsers` | More users to leave out of this test, on top of the levels above. |
+| `ExcludedGroups` | More groups (object ID or mail) whose members are left out of this test. |
 | `IncludeDisabled` | Also check disabled accounts. |
 | `MaxRows` | Most users or rows a result lists (default `100`). The result says how many were left out; set `0` to list them all. |
 
@@ -98,7 +134,6 @@ Set them in `maester-config.json`:
 ```json
 {
   "TestSettings": [
-    { "Id": "MP.CLT.UA.1001", "Parameters": { "ExcludedGroups": ["<group object id>"] } },
     { "Id": "MP.CLT.UA.1008", "Parameters": { "Fields": ["city", "country", "officeLocation"] } },
     { "Id": "MP.CLT.UA.1016", "Parameters": { "MaxRows": 0 } },
     { "Id": "MP.CLT.UA.1011", "Parameters": { "AllowSpaces": true } },

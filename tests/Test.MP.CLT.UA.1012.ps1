@@ -32,11 +32,11 @@ function Test-CltAttributeWhitespace {
             'streetAddress', 'city', 'state', 'postalCode', 'country', 'employeeId', 'employeeType')]
         [string[]] $Attributes = ('displayName', 'givenName', 'surname', 'jobTitle', 'department', 'companyName', 'officeLocation', 'city', 'state', 'country'),
 
-        # Users (user principal name or object ID) that are exempt from this check.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -49,7 +49,8 @@ function Test-CltAttributeWhitespace {
     )
 
     $population = Get-CltPopulation -IncludeDisabled $IncludeDisabled
-    $users = Get-CltUser -Property $Attributes -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $set = Get-CltUser -Property $Attributes -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = $set.Users
     if ($users.Count -eq 0) {
         Add-MtTestResultDetail -SkippedBecause Custom -SkippedCustomReason "There are no $population to check after exclusions."
     }
@@ -82,12 +83,12 @@ function Test-CltAttributeWhitespace {
     }
 
     if ($rows.Count -eq 0) {
-        Add-MtTestResultDetail -Result "Well done. None of the $($users.Count) $population has stray spaces in $($Attributes -join ', ')."
+        Add-CltResult -Note $set.Note -Result "Well done. None of the $($users.Count) $population has stray spaces in $($Attributes -join ', ')."
         return $true
     }
 
     $table = Format-CltTable -Rows $rows.ToArray() -Columns 'User', 'Attribute', 'Problem', 'Value' -MaxRows $MaxRows
-    Add-MtTestResultDetail -Result ("$($rows.Count) attribute value(s) on $population have stray or invisible spaces. In the table, " +
+    Add-CltResult -Note $set.Note -Result ("$($rows.Count) attribute value(s) on $population have stray or invisible spaces. In the table, " +
         "$([char]0x2423) marks each space.`n`n$table")
     return $false
 }

@@ -13,30 +13,191 @@ function Get-CltUserSelect {
     param()
 
     return @(
-        'id', 'displayName', 'userPrincipalName', 'userType', 'accountEnabled',
+        'id', 'displayName', 'userPrincipalName', 'userType', 'accountEnabled', 'assignedLicenses',
         'givenName', 'surname', 'usageLocation', 'jobTitle', 'department', 'companyName', 'employeeId',
         'streetAddress', 'city', 'state', 'postalCode', 'country', 'officeLocation',
         'businessPhones', 'mobilePhone', 'faxNumber'
     )
 }
 
-function Get-CltUser {
+function Get-CltSetting {
     <#
     .SYNOPSIS
-    Returns the users a devclate.user-attributes test checks, with the requested properties.
+    Returns a GlobalSettings value from maester-config.json, or Default when it is not set or cannot be read.
+    #>
+    [CmdletBinding()]
+    [OutputType([object])]
+    param(
+        # The setting's name, such as CLT.UA.ExcludedUsers.
+        [string] $Name,
+
+        # The value to return when the setting is not set.
+        $Default
+    )
+
+    if (-not (Get-Command -Name Get-MtSetting -ErrorAction SilentlyContinue)) { return $Default }
+    $value = Get-MtSetting -Name $Name -Default $Default
+    if ($null -eq $value) { return $Default }
+    return $value
+}
+
+function Get-CltSettingList {
+    <#
+    .SYNOPSIS
+    Returns a GlobalSettings value as a list of non-blank strings, whether the config holds one string or a list.
+    #>
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param(
+        # The setting's name, such as CLT.UA.ExcludedGroups.
+        [string] $Name
+    )
+
+    $list = foreach ($item in @(Get-CltSetting -Name $Name -Default @())) {
+        if ($null -ne $item -and -not [string]::IsNullOrWhiteSpace([string]$item)) { ([string]$item).Trim() }
+    }
+    return @($list)
+}
+
+function Test-CltSettingTrue {
+    <#
+    .SYNOPSIS
+    Reads a true/false GlobalSettings value, accepting true, false, "true" or "false".
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        # The setting's name, such as CLT.UA.OnlyLicensedUsers.
+        [string] $Name,
+
+        # The value when the setting is not set.
+        [bool] $Default = $false
+    )
+
+    $value = Get-CltSetting -Name $Name -Default $Default
+    if ($value -is [bool]) { return $value }
+    if ($value -is [string]) {
+        if ($value -match '^\s*(true|yes|1)\s*$') { return $true }
+        if ($value -match '^\s*(false|no|0)\s*$') { return $false }
+        return $Default
+    }
+    return [bool]$value
+}
+
+function Get-CltGroupMemberId {
+    <#
+    .SYNOPSIS
+    Returns the object IDs of a group's members, including nested members. The group is an object ID or a mail address.
+    #>
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param(
+        # The group's object ID, or its mail address or mail nickname.
+        [string] $Group
+    )
+
+    $Group = $Group.Trim()
+    $groupIds = if ($Group -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+        @($Group)
+    } else {
+        $escaped = $Group.Replace("'", "''")
+        @(Invoke-MtGraphRequest -RelativeUri 'groups' -ApiVersion v1.0 -Select id -Filter "mail eq '$escaped' or mailNickname eq '$escaped'" |
+                ForEach-Object { $_.id } | Where-Object { $_ })
+    }
+
+    $ids = foreach ($id in $groupIds) {
+        $members = @(Invoke-MtGraphRequest -RelativeUri "groups/$([uri]::EscapeDataString($id))/transitiveMembers" -ApiVersion v1.0 -Select id -QueryParameters @{ '$top' = 999 })
+        foreach ($member in $members) { if ($member.id) { [string]$member.id } }
+    }
+    return @($ids)
+}
+
+function New-CltExclusionSet {
+    <#
+    .SYNOPSIS
+    Builds a set of user object IDs and user principal names from users and groups, for leaving users out.
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Collections.Generic.HashSet[string]])]
+    param(
+        # User principal names or object IDs.
+        [string[]] $Users,
+
+        # Group object IDs or mail addresses; their members, including nested members, are added.
+        [string[]] $Groups
+    )
+
+    $set = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($user in $Users) {
+        if (-not [string]::IsNullOrWhiteSpace($user)) { [void]$set.Add($user.Trim()) }
+    }
+    foreach ($group in $Groups) {
+        if ([string]::IsNullOrWhiteSpace($group)) { continue }
+        foreach ($id in (Get-CltGroupMemberId -Group $group)) { [void]$set.Add($id) }
+    }
+    return , $set
+}
+
+function Get-CltExclusionSource {
+    <#
+    .SYNOPSIS
+    Returns the three lists of users to leave out, in the order they are applied: emergency access accounts,
+    the pack-wide exclusions and the test's own exclusions.
 
     .DESCRIPTION
-    Reads users from Microsoft Graph with Invoke-MtGraphRequest (cached and paged by Maester).
-    Leaves out the Microsoft Entra Connect sync account, the users and group members a test is told to
-    exempt and, unless IncludeDisabled is set, disabled accounts.
-
-    Without Expand, every test sends the same request (all users, the properties from Get-CltUserSelect) and
-    filters the user type and account state here, so the directory is read from Graph once per run. With
-    Expand (manager, sponsors), Graph does not accept every $filter together with $expand on users, so those
-    are filtered here too.
+    - Emergency access: Maester's GlobalSettings.EmergencyAccessAccounts (entries with Id or UserPrincipalName,
+      and Type User or Group). Turn it off for this pack with GlobalSettings."CLT.UA.ExcludeEmergencyAccessAccounts" = false.
+    - Pack-wide: GlobalSettings."CLT.UA.ExcludedUsers" and "CLT.UA.ExcludedGroups", for every test in the pack.
+    - This test: the test's ExcludedUsers and ExcludedGroups parameters.
+    The lists add up: a test's own exclusions never replace the others.
     #>
     [CmdletBinding()]
     [OutputType([object[]])]
+    param(
+        # The test's own ExcludedUsers parameter.
+        [string[]] $ExcludedUsers,
+
+        # The test's own ExcludedGroups parameter.
+        [string[]] $ExcludedGroups
+    )
+
+    $emergencyUsers = [System.Collections.Generic.List[string]]::new()
+    $emergencyGroups = [System.Collections.Generic.List[string]]::new()
+    if (Test-CltSettingTrue -Name 'CLT.UA.ExcludeEmergencyAccessAccounts' -Default $true) {
+        foreach ($account in @(Get-CltSetting -Name 'EmergencyAccessAccounts' -Default @())) {
+            if ($null -eq $account) { continue }
+            if ($account -is [string]) { $emergencyUsers.Add($account); continue }
+            $identifier = if ($account.Id) { [string]$account.Id } else { [string]$account.UserPrincipalName }
+            if ([string]::IsNullOrWhiteSpace($identifier)) { continue }
+            if ("$($account.Type)" -eq 'Group') { $emergencyGroups.Add($identifier) } else { $emergencyUsers.Add($identifier) }
+        }
+    }
+
+    return @(
+        [pscustomobject]@{ Name = 'emergency access'; Set = (New-CltExclusionSet -Users $emergencyUsers -Groups $emergencyGroups) }
+        [pscustomobject]@{ Name = 'pack-wide'; Set = (New-CltExclusionSet -Users (Get-CltSettingList -Name 'CLT.UA.ExcludedUsers') -Groups (Get-CltSettingList -Name 'CLT.UA.ExcludedGroups')) }
+        [pscustomobject]@{ Name = 'this test'; Set = (New-CltExclusionSet -Users $ExcludedUsers -Groups $ExcludedGroups) }
+    )
+}
+
+function Get-CltUser {
+    <#
+    .SYNOPSIS
+    Returns the users a devclate.user-attributes test checks (Users), and a note for the result that says who
+    was left out and why (Note).
+
+    .DESCRIPTION
+    Reads users from Microsoft Graph with Invoke-MtGraphRequest (cached and paged by Maester), then leaves out:
+    users of the other type (member or guest); disabled accounts unless IncludeDisabled is set; the Microsoft
+    Entra Connect sync account; unlicensed members when GlobalSettings."CLT.UA.OnlyLicensedUsers" is true; and
+    the users from Get-CltExclusionSource.
+
+    Without Expand, every test sends the same request (all users, the properties from Get-CltUserSelect, 999 per
+    page), so the directory is read from Graph once per run. With Expand (manager, sponsors), Graph does not
+    accept every $filter together with $expand on users, so the filtering is done here.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
     param(
         # Extra user properties to select, beyond the ones every test shares.
         [string[]] $Property,
@@ -48,10 +209,10 @@ function Get-CltUser {
         # Also return disabled accounts.
         [bool] $IncludeDisabled = $false,
 
-        # User principal names or object IDs to leave out.
+        # The test's own user principal names or object IDs to leave out.
         [string[]] $ExcludedUsers,
 
-        # Object IDs of groups whose members (including nested members) are left out.
+        # The test's own group object IDs (or mail addresses) whose members, including nested members, are left out.
         [string[]] $ExcludedGroups,
 
         # A relationship to expand, such as manager($select=id,displayName).
@@ -60,25 +221,19 @@ function Get-CltUser {
 
     # Named parameters, not a splat: Maester's pack scan must see that every request is a read.
     if ($Expand) {
-        $select = @('id', 'displayName', 'userPrincipalName', 'userType', 'accountEnabled') + @($Property | Where-Object { $_ }) |
+        $select = @('id', 'displayName', 'userPrincipalName', 'userType', 'accountEnabled', 'assignedLicenses') + @($Property | Where-Object { $_ }) |
             Select-Object -Unique
         $users = @(Invoke-MtGraphRequest -RelativeUri 'users' -ApiVersion v1.0 -Select $select -QueryParameters @{ '$expand' = $Expand })
     } else {
         $select = @(Get-CltUserSelect) + @($Property | Where-Object { $_ }) | Select-Object -Unique
-        $users = @(Invoke-MtGraphRequest -RelativeUri 'users' -ApiVersion v1.0 -Select $select)
+        $users = @(Invoke-MtGraphRequest -RelativeUri 'users' -ApiVersion v1.0 -Select $select -QueryParameters @{ '$top' = 999 })
     }
 
-    $excluded = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($user in $ExcludedUsers) {
-        if (-not [string]::IsNullOrWhiteSpace($user)) { [void]$excluded.Add($user.Trim()) }
-    }
-    foreach ($group in $ExcludedGroups) {
-        if ([string]::IsNullOrWhiteSpace($group)) { continue }
-        $members = @(Invoke-MtGraphRequest -RelativeUri "groups/$([uri]::EscapeDataString($group.Trim()))/transitiveMembers" -ApiVersion v1.0 -Select id)
-        foreach ($member in $members) {
-            if ($member.id) { [void]$excluded.Add([string]$member.id) }
-        }
-    }
+    $onlyLicensed = $UserType -eq 'Member' -and (Test-CltSettingTrue -Name 'CLT.UA.OnlyLicensedUsers' -Default $false)
+    $sources = @(Get-CltExclusionSource -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups)
+    $counts = [ordered]@{}
+    foreach ($source in $sources) { $counts[$source.Name] = 0 }
+    $unlicensed = 0
 
     $kept = foreach ($user in $users) {
         if (-not $user) { continue }
@@ -88,10 +243,60 @@ function Get-CltUser {
         if (-not $IncludeDisabled -and $user.accountEnabled -eq $false) { continue }
         # Microsoft Entra Connect creates this account; it never has HR attributes.
         if ("$($user.userPrincipalName)" -like 'Sync_*' -or $user.displayName -eq 'On-Premises Directory Synchronization Service Account') { continue }
-        if ($excluded.Contains([string]$user.id) -or $excluded.Contains([string]$user.userPrincipalName)) { continue }
+        if ($onlyLicensed -and @($user.assignedLicenses).Count -eq 0) { $unlicensed++; continue }
+        $leftOut = $false
+        foreach ($source in $sources) {
+            if ($source.Set.Contains([string]$user.id) -or $source.Set.Contains([string]$user.userPrincipalName)) {
+                $counts[$source.Name]++
+                $leftOut = $true
+                break
+            }
+        }
+        if ($leftOut) { continue }
         $user
     }
-    return @($kept)
+
+    $parts = [System.Collections.Generic.List[string]]::new()
+    if ($counts['emergency access']) { $parts.Add("$($counts['emergency access']) emergency access (EmergencyAccessAccounts)") }
+    if ($counts['pack-wide']) { $parts.Add("$($counts['pack-wide']) by the pack-wide exclusions (CLT.UA.ExcludedUsers and CLT.UA.ExcludedGroups)") }
+    if ($counts['this test']) { $parts.Add("$($counts['this test']) by this test's ExcludedUsers and ExcludedGroups") }
+    $sentences = [System.Collections.Generic.List[string]]::new()
+    $total = ($counts.Values | Measure-Object -Sum).Sum
+    if ($total) {
+        $noun = if ($total -eq 1) { 'user' } else { 'users' }
+        $sentences.Add("Left out $total ${noun}: $($parts -join ', ').")
+    }
+    if ($onlyLicensed) { $sentences.Add("Only licensed users were checked (CLT.UA.OnlyLicensedUsers); $unlicensed unlicensed $(if ($unlicensed -eq 1) { 'user was' } else { 'users were' }) skipped.") }
+    $note = if ($sentences.Count) { "`n`n" + ($sentences -join ' ') } else { '' }
+
+    return [pscustomobject]@{ Users = @($kept); Note = $note }
+}
+
+function Add-CltResult {
+    <#
+    .SYNOPSIS
+    Writes a test's result with Add-MtTestResultDetail, followed by the note from Get-CltUser about who was left out.
+    #>
+    [CmdletBinding()]
+    param(
+        # The result text, in Markdown.
+        [string] $Result,
+
+        # The note from Get-CltUser, or empty.
+        [string] $Note,
+
+        # Report the result as Investigate.
+        [switch] $Investigate,
+
+        # Users to list where the result has %TestResult%.
+        [object[]] $GraphObjects
+    )
+
+    if ($GraphObjects) {
+        Add-MtTestResultDetail -Result ($Result + $Note) -Investigate:$Investigate -GraphObjects $GraphObjects -GraphObjectType Users
+    } else {
+        Add-MtTestResultDetail -Result ($Result + $Note) -Investigate:$Investigate
+    }
 }
 
 function Test-CltIsBlank {
@@ -128,6 +333,7 @@ function Get-CltPopulation {
     )
 
     $type = $UserType.ToLowerInvariant()
+    if ($UserType -eq 'Member' -and (Test-CltSettingTrue -Name 'CLT.UA.OnlyLicensedUsers' -Default $false)) { $type = "licensed $type" }
     if ($IncludeDisabled) { return "$type users" }
     return "enabled $type users"
 }
@@ -218,7 +424,10 @@ function Invoke-CltPresenceCheck {
         [string] $Population,
 
         # Most users to list in the result; 0 lists them all.
-        [int] $MaxRows = 100
+        [int] $MaxRows = 100,
+
+        # The note from Get-CltUser about who was left out, added to the end of the result.
+        [string] $Note
     )
 
     if ($Users.Count -eq 0) {
@@ -231,7 +440,7 @@ function Invoke-CltPresenceCheck {
     }
 
     if ($missing.Count -eq 0) {
-        Add-MtTestResultDetail -Result "Well done. All $($Users.Count) $Population have $Label."
+        Add-CltResult -Note $Note -Result "Well done. All $($Users.Count) $Population have $Label."
         return $true
     }
 
@@ -242,10 +451,10 @@ function Invoke-CltPresenceCheck {
         [pscustomobject]@{ id = $user.id; displayName = $name; userPrincipalName = $user.userPrincipalName }
     }
 
-    $result = "$($missing.Count) of $($Users.Count) $Population have no $Label.`n`n%TestResult%"
+    $result = "$($missing.Count) of $($Users.Count) $Population do not have $Label.`n`n%TestResult%"
     if ($missing.Count -gt $listed.Count) {
         $result += "`n" + (Get-CltMoreRowsNote -Shown $listed.Count -Total $missing.Count)
     }
-    Add-MtTestResultDetail -Result $result -GraphObjects @($objects) -GraphObjectType Users
+    Add-CltResult -Note $Note -Result $result -GraphObjects @($objects)
     return $false
 }

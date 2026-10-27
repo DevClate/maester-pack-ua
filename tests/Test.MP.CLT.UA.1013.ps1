@@ -36,11 +36,11 @@ function Test-CltCountrySpelling {
         # Treat values that differ only in letter case (united states and United States) as different spellings.
         [bool] $CaseSensitive = $true,
 
-        # Users (user principal name or object ID) that are exempt from this check.
+        # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
         [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # Members of these groups (object IDs) are exempt from this check.
+        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 
@@ -53,7 +53,8 @@ function Test-CltCountrySpelling {
     )
 
     $population = Get-CltPopulation -IncludeDisabled $IncludeDisabled
-    $users = @(Get-CltUser -Property country -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups |
+    $set = Get-CltUser -Property country -IncludeDisabled $IncludeDisabled -ExcludedUsers $ExcludedUsers -ExcludedGroups $ExcludedGroups
+    $users = @($set.Users |
         Where-Object { -not (Test-CltIsBlank $_.country) })
     if ($users.Count -eq 0) {
         Add-MtTestResultDetail -SkippedBecause Custom -SkippedCustomReason "None of the $population has a country set."
@@ -76,10 +77,10 @@ function Test-CltCountrySpelling {
         $rows = @($groups.GetEnumerator() | Sort-Object { $_.Value.Count } -Descending | ForEach-Object { ConvertTo-CltCountryRow -Entry $_ })
         $table = Format-CltTable -Rows $rows -Columns 'Country value', 'Users', 'Examples' -MaxRows $MaxRows
         if ($groups.Count -eq 1) {
-            Add-MtTestResultDetail -Result "Well done. All $($users.Count) $population with a country use the same value.`n`n$table"
+            Add-CltResult -Note $set.Note -Result "Well done. All $($users.Count) $population with a country use the same value.`n`n$table"
             return $true
         }
-        Add-MtTestResultDetail -Investigate -Result ("The $($users.Count) $population with a country use $($groups.Count) different values. " +
+        Add-CltResult -Note $set.Note -Investigate -Result ("The $($users.Count) $population with a country use $($groups.Count) different values. " +
             "Check whether any are different spellings of the same country, then list the spellings you use in **AllowedCountries** " +
             "for MP.CLT.UA.1013 in maester-config.json so this test can enforce them.`n`n$table")
         return $true
@@ -87,14 +88,14 @@ function Test-CltCountrySpelling {
 
     $rejected = @($groups.GetEnumerator() | Where-Object { -not $allowed.Contains($_.Key) })
     if ($rejected.Count -eq 0) {
-        Add-MtTestResultDetail -Result "Well done. All $($users.Count) $population with a country use an approved value."
+        Add-CltResult -Note $set.Note -Result "Well done. All $($users.Count) $population with a country use an approved value."
         return $true
     }
 
     $rows = @($rejected | Sort-Object { $_.Value.Count } -Descending | ForEach-Object { ConvertTo-CltCountryRow -Entry $_ })
     $userCount = ($rejected | ForEach-Object { $_.Value.Count } | Measure-Object -Sum).Sum
     $table = Format-CltTable -Rows $rows -Columns 'Country value', 'Users', 'Examples' -MaxRows $MaxRows
-    Add-MtTestResultDetail -Result ("$userCount of $($users.Count) $population have a country that is not an approved value " +
+    Add-CltResult -Note $set.Note -Result ("$userCount of $($users.Count) $population have a country that is not an approved value " +
         "($(@($AllowedCountries | Where-Object { $_ }) -join ', ')).`n`n$table")
     return $false
 }
