@@ -15,7 +15,7 @@ function Test-CltFaxNumber {
         ResourceType = 'User',
         Severity     = 'Info',
         Service      = 'Graph',
-        Permission   = ('User.Read.All', 'GroupMember.Read.All'),
+        Permission   = ('Graph:Scope:User.Read.All', 'Graph:Scope:GroupMember.Read.All'),
         Tag          = ('UserAttributes', 'Presence', 'Phone', 'Fax', 'Optional'),
         Author       = 'DevClate'
     )]

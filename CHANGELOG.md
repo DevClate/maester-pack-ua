@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Qualify every test's permission metadata with `Graph:Scope:` so current Maester builds accept the pack.
+
 ## 0.4.0
 
 - **Exclusions in three levels that add up.** Every test leaves out:
