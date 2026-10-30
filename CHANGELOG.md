@@ -8,7 +8,8 @@
   1. the emergency access accounts and groups in Maester's own `GlobalSettings.EmergencyAccessAccounts` (turn this off for the pack with `"CLT.UA.ExcludeEmergencyAccessAccounts": false`);
   2. the pack-wide `GlobalSettings` `"CLT.UA.ExcludedUsers"` and `"CLT.UA.ExcludedGroups"`, set once for all 17 tests;
   3. the test's own `ExcludedUsers` and `ExcludedGroups`, as before.
-  A test's own exclusions add to the others and never replace them. Each result ends with a line saying how many users each level left out. Groups can be given by object ID or mail address.
+  A test's own exclusions add to the others and never replace them. Each result ends with a line saying how many users each level left out. Groups are object IDs; the pack-wide `CLT.UA.ExcludedGroups` also accepts a group's mail address.
+- A test's own `ExcludedUsers` accepts user principal names, as the README always said. The parameter declared Maester's `Entra.User` kind, which only accepts object IDs, so a UPN made the test fail with `InvalidConfiguration`.
 - **Only licensed users (option).** `"CLT.UA.OnlyLicensedUsers": true` in `GlobalSettings` checks only member users with a licence, which leaves out most service, room and leftover accounts. Guests (MP.CLT.UA.1009) are not affected.
 - The shared users request asks Graph for 999 users per page instead of 100, so large tenants need about a tenth of the requests.
 - Failing presence results read "N of M users do not have a job title" (they read "have no a job title").

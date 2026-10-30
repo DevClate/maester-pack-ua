@@ -83,7 +83,7 @@ Users are left out at three levels, and the levels add up: a test's own list nev
 | Pack-wide | `GlobalSettings` → `"CLT.UA.ExcludedUsers"` and `"CLT.UA.ExcludedGroups"` | Every test in this pack |
 | This test | `TestSettings` → `ExcludedUsers` and `ExcludedGroups` | Only that test |
 
-Users are user principal names or object IDs; groups are object IDs or mail addresses, and their nested members are left out too. Each result ends with a line such as *Left out 14 users: 2 emergency access, 9 by the pack-wide exclusions, 3 by this test's ExcludedUsers and ExcludedGroups*, so you can see why someone isn't listed.
+Users are user principal names or object IDs. Groups are object IDs (the pack-wide `CLT.UA.ExcludedGroups` also accepts a group's mail address), and their nested members are left out too. Each result ends with a line such as *Left out 14 users: 2 emergency access, 9 by the pack-wide exclusions, 3 by this test's ExcludedUsers and ExcludedGroups*, so you can see why someone isn't listed.
 
 ```json
 {
@@ -93,7 +93,7 @@ Users are user principal names or object IDs; groups are object IDs or mail addr
     "CLT.UA.ExcludedGroups": ["<object id of a Service Accounts group>"]
   },
   "TestSettings": [
-    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["contractors@contoso.com"] } }
+    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["<object id of a Contractors group>"] } }
   ]
 }
 ```
@@ -114,7 +114,7 @@ Every test takes these parameters:
 | Parameter | What it does |
 | --- | --- |
 | `ExcludedUsers` | More users to leave out of this test, on top of the levels above. |
-| `ExcludedGroups` | More groups (object ID or mail) whose members are left out of this test. |
+| `ExcludedGroups` | More groups (object IDs) whose members are left out of this test. Maester checks that each value is an object ID. |
 | `IncludeDisabled` | Also check disabled accounts. |
 | `MaxRows` | Most users or rows a result lists (default `100`). The result says how many were left out; set `0` to list them all. |
 

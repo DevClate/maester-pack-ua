@@ -204,7 +204,7 @@ Set per-tenant values in the run folder's `maester-config.json`:
     "CLT.UA.OnlyLicensedUsers": true
   },
   "TestSettings": [
-    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["contractors@contoso.com"] } },
+    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["<object id of a Contractors group>"] } },
     { "Id": "MP.CLT.UA.1013", "Parameters": { "AllowedCountries": ["United States", "Canada"] } },
     { "Id": "MP.CLT.UA.1016", "Parameters": { "MaxRows": 0 } },
     { "Id": "MP.CLT.UA.1015", "Enabled": false, "Reason": "No company mobiles" }

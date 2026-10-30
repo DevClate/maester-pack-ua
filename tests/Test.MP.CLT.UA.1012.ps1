@@ -33,10 +33,9 @@ function Test-CltAttributeWhitespace {
         [string[]] $Attributes = ('displayName', 'givenName', 'surname', 'jobTitle', 'department', 'companyName', 'officeLocation', 'city', 'state', 'country'),
 
         # More users (user principal name or object ID) to leave out of this test, on top of the pack-wide exclusions.
-        [MaesterParameter(Kind = 'Entra.User')]
         [string[]] $ExcludedUsers,
 
-        # More groups (object ID or mail address) whose members, including nested members, are left out of this test.
+        # More groups (object IDs) whose members, including nested members, are left out of this test.
         [MaesterParameter(Kind = 'Entra.Group')]
         [string[]] $ExcludedGroups,
 

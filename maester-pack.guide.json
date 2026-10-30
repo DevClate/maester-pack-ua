@@ -55,7 +55,7 @@
       {
         "Name": "GlobalSettings: CLT.UA.ExcludedGroups",
         "Default": "none",
-        "Text": "Groups (object ID or mail) whose members, including nested members, are left out of every test."
+        "Text": "Groups (object ID or mail address) whose members, including nested members, are left out of every test."
       },
       {
         "Name": "GlobalSettings: CLT.UA.ExcludeEmergencyAccessAccounts",
@@ -70,7 +70,7 @@
       {
         "Name": "ExcludedUsers, ExcludedGroups (every test)",
         "Default": "none",
-        "Text": "More users or groups to leave out of one test. They add to the pack-wide and emergency access exclusions."
+        "Text": "More users (UPN or object ID) or groups (object ID) to leave out of one test. They add to the pack-wide and emergency access exclusions."
       },
       {
         "Name": "IncludeDisabled (every test)",
