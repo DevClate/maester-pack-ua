@@ -19,7 +19,7 @@ function Test-CltEmployeeHireDate {
         UserImpact   = 'Low',
         ImplementationCost = 'Medium',
         Service      = 'Graph',
-        Permission   = ('User.Read.All', 'User-LifeCycleInfo.Read.All', 'GroupMember.Read.All'),
+        Permission   = ('Graph:Scope:User.Read.All', 'Graph:Scope:User-LifeCycleInfo.Read.All', 'Graph:Scope:GroupMember.Read.All'),
         Tag          = ('UserAttributes', 'Presence', 'Governance', 'LifecycleWorkflows'),
         Author       = 'DevClate'
     )]

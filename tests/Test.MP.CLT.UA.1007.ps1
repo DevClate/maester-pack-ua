@@ -17,7 +17,7 @@ function Test-CltCompanyName {
         UserImpact   = 'Low',
         ImplementationCost = 'Low',
         Service      = 'Graph',
-        Permission   = ('User.Read.All', 'GroupMember.Read.All'),
+        Permission   = ('Graph:Scope:User.Read.All', 'Graph:Scope:GroupMember.Read.All'),
         Tag          = ('UserAttributes', 'Presence'),
         Author       = 'DevClate'
     )]
