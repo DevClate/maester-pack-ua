@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User Attributes Maester configuration",
+  "type": "object",
+  "required": ["GlobalSettings", "TestSettings"],
+  "properties": {
+    "GlobalSettings": {
+      "type": "object",
+      "properties": {
+        "EmergencyAccessAccounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["Type"],
+            "properties": {
+              "Type": { "enum": ["User", "Group"] },
+              "UserPrincipalName": { "type": "string" },
+              "Id": { "type": "string" }
+            },
+            "anyOf": [
+              { "required": ["UserPrincipalName"] },
+              { "required": ["Id"] }
+            ],
+            "additionalProperties": true
+          }
+        },
+        "CLT.UA.ExcludedUsers": { "$ref": "#/definitions/stringOrStrings" },
+        "CLT.UA.ExcludedGroups": { "$ref": "#/definitions/stringOrStrings" },
+        "CLT.UA.ExcludeEmergencyAccessAccounts": { "type": "boolean" },
+        "CLT.UA.OnlyLicensedUsers": { "type": "boolean" },
+        "CLT.UA.AllowedValues": {
+          "type": "object",
+          "properties": {
+            "department": { "$ref": "#/definitions/stringOrStrings" },
+            "jobTitle": { "$ref": "#/definitions/stringOrStrings" },
+            "companyName": { "$ref": "#/definitions/stringOrStrings" },
+            "streetAddress": { "$ref": "#/definitions/stringOrStrings" },
+            "city": { "$ref": "#/definitions/stringOrStrings" },
+            "state": { "$ref": "#/definitions/stringOrStrings" },
+            "postalCode": { "$ref": "#/definitions/stringOrStrings" },
+            "country": { "$ref": "#/definitions/stringOrStrings" },
+            "businessPhones": { "$ref": "#/definitions/stringOrStrings" },
+            "officeLocation": { "$ref": "#/definitions/stringOrStrings" },
+            "locations": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/location" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "CLT.UA.AllowedValuesFile": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "TestSettings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["Id"],
+        "properties": {
+          "Id": { "type": "string", "minLength": 1 },
+          "Enabled": { "type": "boolean" },
+          "Reason": { "type": "string" },
+          "Severity": { "enum": ["Critical", "High", "Medium", "Low", "Info"] },
+          "Parameters": { "type": "object" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "stringOrStrings": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "streetAddress": { "$ref": "#/definitions/stringOrStrings" },
+        "city": { "$ref": "#/definitions/stringOrStrings" },
+        "state": { "$ref": "#/definitions/stringOrStrings" },
+        "postalCode": { "$ref": "#/definitions/stringOrStrings" },
+        "country": { "$ref": "#/definitions/stringOrStrings" },
+        "companyName": { "$ref": "#/definitions/stringOrStrings" },
+        "businessPhones": { "$ref": "#/definitions/stringOrStrings" },
+        "officeLocation": { "$ref": "#/definitions/stringOrStrings" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

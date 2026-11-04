@@ -1,0 +1,48 @@
+{
+  "GlobalSettings": {
+    "EmergencyAccessAccounts": [
+      { "Type": "User", "UserPrincipalName": "breakglass1@contoso.com" },
+      { "Type": "User", "UserPrincipalName": "breakglass2@contoso.com" }
+    ],
+    "CLT.UA.ExcludedUsers": ["svc-scanner@contoso.com", "svc-backup@contoso.com"],
+    "CLT.UA.ExcludedGroups": ["11111111-1111-1111-1111-111111111111"],
+    "CLT.UA.OnlyLicensedUsers": true,
+
+    "CLT.UA.AllowedValues": {
+      "department": ["IT", "Finance", "Human Resources", "Sales"],
+      "jobTitle": ["Chief Executive Officer", "IT Manager", "Accountant", "Sales Representative"],
+      "country": ["United States", "Canada"],
+      "locations": [
+        { "name": "Seattle HQ", "streetAddress": "1 Microsoft Way", "city": "Redmond", "state": "WA",
+          "postalCode": "98052", "country": "United States", "companyName": "Contoso Ltd",
+          "businessPhones": "+14255550100" },
+        { "name": "Toronto", "streetAddress": "100 King Street West", "city": "Toronto", "state": "ON",
+          "postalCode": "M5X 1A9", "country": "Canada", "companyName": "Contoso Canada" }
+      ]
+    },
+    "CLT.UA.AllowedValuesFile": "./validation.json"
+  },
+
+  "TestSettings": [
+    { "Id": "MT.1005", "Severity": "Critical" },
+    { "Id": "MT.1007", "Severity": "Critical" },
+    { "Id": "MT.1018", "Severity": "Low" },
+    { "Id": "MT.1021", "Enabled": false, "Reason": "Security Defaults replaced by Conditional Access" },
+    { "Id": "MT.1022", "Severity": "Info" },
+
+    { "Id": "MP.CLT.UA.1001", "Severity": "Critical" },
+    { "Id": "MP.CLT.UA.1002", "Severity": "High", "Parameters": { "ExcludedJobTitles": ["CEO", "Chief Executive Officer", "Managing Director"] } },
+    { "Id": "MP.CLT.UA.1005", "Parameters": { "ExcludedGroups": ["22222222-2222-2222-2222-222222222222"] } },
+    { "Id": "MP.CLT.UA.1003", "Parameters": { "ExcludedUsers": ["intern-shared@contoso.com"] } },
+    { "Id": "MP.CLT.UA.1007", "Enabled": false, "Reason": "Single company tenant" },
+    { "Id": "MP.CLT.UA.1008", "Parameters": { "Fields": ["city", "country", "officeLocation"] } },
+    { "Id": "MP.CLT.UA.1010", "Severity": "High", "Parameters": { "IgnoreLeadingZeros": true } },
+    { "Id": "MP.CLT.UA.1011", "Parameters": { "AllowSpaces": true, "MaxRows": 250 } },
+    { "Id": "MP.CLT.UA.1013", "Parameters": { "AllowedCountries": ["United States", "Canada", "United Kingdom"], "CaseSensitive": false } },
+    { "Id": "MP.CLT.UA.1015", "Severity": "Info" },
+    { "Id": "MP.CLT.UA.1016", "Enabled": false, "Reason": "Fax not used" },
+    { "Id": "MP.CLT.UA.1017", "Parameters": { "MaxRows": 0 } },
+    { "Id": "MP.CLT.UA.1019", "Parameters": { "AllowedValues": ["IT Manager", "Accountant"], "CaseSensitive": false } },
+    { "Id": "MP.CLT.UA.1026", "Parameters": { "Fields": ["streetAddress", "city", "postalCode", "companyName", "businessPhones"] } }
+  ]
+}
