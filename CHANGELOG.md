@@ -1,11 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Added a quick start and a clear note about the pack's PowerShell trust boundary.
-- Added schema validation for the example configuration and CI checks for changelog and documentation version drift.
-- CI installs the Maester prerelease and requires Maester 3.x for pack validation; release jobs report release immutability and pack-index status.
-
 ## 0.5.0
 
 - **Nine approved-value tests**, converted from the ENTRA.UV Validating tests in DevClate/Custom-Maester-Tests: department (MP.CLT.UA.1018), job title (1019), company name (1020), street address (1021), city (1022), state or province (1023), postal code (1024) and business phone number (1025) are on the approved list, and each user's address matches an approved office location (1026, which replaces the two 2.x location tests; its `Fields` parameter chooses whether the business phone is compared).
@@ -13,6 +7,9 @@
 - Without approved values, these tests report **Investigate** and list the values in use with how many users have each, ready to copy into the config. Unapproved values are listed once each, with the number of users and examples; MP.CLT.UA.1026 shows each user's closest approved location and the fields that differ.
 - MP.CLT.UA.1013 uses `CLT.UA.AllowedValues` → `country` when its own `AllowedCountries` is empty.
 - Qualify every test's permission metadata with `Graph:Scope:` so current Maester builds accept the pack.
+- Added a quick start and a clear note about the pack's PowerShell trust boundary.
+- Added schema validation for the example configuration and CI checks for changelog and documentation version drift.
+- CI installs the Maester prerelease and requires Maester 3.x for pack validation; release jobs report release immutability and pack-index status.
 
 ## 0.4.0
 
