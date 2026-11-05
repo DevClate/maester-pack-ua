@@ -257,9 +257,12 @@ function Get-CltUser {
     }
 
     $parts = [System.Collections.Generic.List[string]]::new()
-    if ($counts['emergency access']) { $parts.Add("$($counts['emergency access']) emergency access (EmergencyAccessAccounts)") }
-    if ($counts['pack-wide']) { $parts.Add("$($counts['pack-wide']) by the pack-wide exclusions (CLT.UA.ExcludedUsers and CLT.UA.ExcludedGroups)") }
-    if ($counts['this test']) { $parts.Add("$($counts['this test']) by this test's ExcludedUsers and ExcludedGroups") }
+    $emergencyCount = $counts['emergency access']
+    $packCount = $counts['pack-wide']
+    $testCount = $counts['this test']
+    if ($emergencyCount) { $parts.Add("$emergencyCount emergency access (EmergencyAccessAccounts)") }
+    if ($packCount) { $parts.Add("$packCount by the pack-wide exclusions (CLT.UA.ExcludedUsers and CLT.UA.ExcludedGroups)") }
+    if ($testCount) { $parts.Add("$testCount by this test's ExcludedUsers and ExcludedGroups") }
     if ($onlyLicensed -and $unlicensed) { $parts.Add("$unlicensed unlicensed, skipped because only licensed users are checked (CLT.UA.OnlyLicensedUsers)") }
     $lines = [System.Collections.Generic.List[string]]::new()
     $total = ($counts.Values | Measure-Object -Sum).Sum + $unlicensed
