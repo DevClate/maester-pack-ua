@@ -260,14 +260,18 @@ function Get-CltUser {
     if ($counts['emergency access']) { $parts.Add("$($counts['emergency access']) emergency access (EmergencyAccessAccounts)") }
     if ($counts['pack-wide']) { $parts.Add("$($counts['pack-wide']) by the pack-wide exclusions (CLT.UA.ExcludedUsers and CLT.UA.ExcludedGroups)") }
     if ($counts['this test']) { $parts.Add("$($counts['this test']) by this test's ExcludedUsers and ExcludedGroups") }
-    $sentences = [System.Collections.Generic.List[string]]::new()
-    $total = ($counts.Values | Measure-Object -Sum).Sum
+    if ($onlyLicensed -and $unlicensed) { $parts.Add("$unlicensed unlicensed, skipped because only licensed users are checked (CLT.UA.OnlyLicensedUsers)") }
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $total = ($counts.Values | Measure-Object -Sum).Sum + $unlicensed
     if ($total) {
         $noun = if ($total -eq 1) { 'user' } else { 'users' }
-        $sentences.Add("Left out $total ${noun}: $($parts -join ', ').")
+        $lines.Add("Left out $total ${noun}:")
+        $lines.Add('')
+        foreach ($part in $parts) { $lines.Add("- $part") }
+    } elseif ($onlyLicensed) {
+        $lines.Add('Only licensed users were checked (CLT.UA.OnlyLicensedUsers); no unlicensed users were skipped.')
     }
-    if ($onlyLicensed) { $sentences.Add("Only licensed users were checked (CLT.UA.OnlyLicensedUsers); $unlicensed unlicensed $(if ($unlicensed -eq 1) { 'user was' } else { 'users were' }) skipped.") }
-    $note = if ($sentences.Count) { "`n`n" + ($sentences -join ' ') } else { '' }
+    $note = if ($lines.Count) { "`n`n" + ($lines -join "`n") } else { '' }
 
     return [pscustomobject]@{ Users = @($kept); Note = $note }
 }

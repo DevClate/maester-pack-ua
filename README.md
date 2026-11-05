@@ -103,7 +103,13 @@ Users are left out at three levels, and the levels add up: a test's own list nev
 | Pack-wide | `GlobalSettings` → `"CLT.UA.ExcludedUsers"` and `"CLT.UA.ExcludedGroups"` | Every test in this pack |
 | This test | `TestSettings` → `ExcludedUsers` and `ExcludedGroups` | Only that test |
 
-Users are user principal names or object IDs. Groups are object IDs (the pack-wide `CLT.UA.ExcludedGroups` also accepts a group's mail address), and their nested members are left out too. Each result ends with a line such as *Left out 14 users: 2 emergency access, 9 by the pack-wide exclusions, 3 by this test's ExcludedUsers and ExcludedGroups*, so you can see why someone isn't listed.
+Users are user principal names or object IDs. Groups are object IDs (the pack-wide `CLT.UA.ExcludedGroups` also accepts a group's mail address), and their nested members are left out too. Each result ends with a bulleted summary, so you can see why someone isn't listed:
+
+> Left out 14 users:
+>
+> - 2 emergency access (EmergencyAccessAccounts)
+> - 9 by the pack-wide exclusions (CLT.UA.ExcludedUsers and CLT.UA.ExcludedGroups)
+> - 3 by this test's ExcludedUsers and ExcludedGroups
 
 ```json
 {

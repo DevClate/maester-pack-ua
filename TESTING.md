@@ -159,7 +159,7 @@ Invoke-MtTest -Path .\tests\Test.MP.CLT.UA.1013.ps1 -Parameter @{ AllowedCountri
 Invoke-MtTest -Path .\tests\Test.MP.CLT.UA.1001.ps1 -Parameter @{ ExcludedUsers = 'breakglass@contoso.com' }
 ```
 
-**Pack-wide settings while you develop.** `Invoke-MtTest -Path .` reads a `maester-config.json` in the pack folder (or up to five parent folders). The pack's `.gitignore` keeps that file out of the repository, so you can put test exclusions in it, for example `{ "GlobalSettings": { "CLT.UA.ExcludedUsers": ["svc-scanner@contoso.com"], "CLT.UA.OnlyLicensedUsers": true } }`. Each result then ends with a *Left out N users* line that shows which levels applied (README, **Leaving users out**).
+**Pack-wide settings while you develop.** `Invoke-MtTest -Path .` reads a `maester-config.json` in the pack folder (or up to five parent folders). The pack's `.gitignore` keeps that file out of the repository, so you can put test exclusions in it, for example `{ "GlobalSettings": { "CLT.UA.ExcludedUsers": ["svc-scanner@contoso.com"], "CLT.UA.OnlyLicensedUsers": true } }`. Each result then ends with a *Left out N users* list that shows which levels applied (README, **Leaving users out**).
 
 **Approved values while you develop.** Put `CLT.UA.AllowedValues` (or `CLT.UA.AllowedValuesFile`, pointing at a copy of your 2.x `validation.json`) in the same file to try MP.CLT.UA.1013 and 1018–1026. With no approved values they report **Investigate** and list what the tenant uses, which is the quickest way to build the lists (README, **Approved values**).
 
